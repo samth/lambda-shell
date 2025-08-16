@@ -136,7 +136,7 @@ The next testcase is dumped from the debug information of @~cite[libssh2].
              (expect-bytes= ptext plaintext))))]
 
 @chunk[<aes>
-       (require bitmap)
+       (require geofun/vector)
 
        (require digimon/spec)
        (require digimon/format)
@@ -155,17 +155,17 @@ The next testcase is dumped from the debug information of @~cite[libssh2].
        (define aes-key192 '0x8e73b0f7da0e6452c810f32b809079e562f8ead2522c6b7b)
        (define aes-key256 '0x603deb1015ca71be2b73aef0857d77811f352c073b6108d72d9810a30914dff4)
        
-       (define state-array-bitmap : (-> Bytes Bitmap)
+       (define state-array-bitmap : (-> Bytes Geo)
          (let ([/dev/stdout (open-output-string '/dev/stdout)])
            (lambda [state]
              (state-array-pretty-print state 4 4 #:port /dev/stdout)
 
              (let ([octets (string-split (bytes->string/latin-1 (get-output-bytes /dev/stdout #true)))])
-               (bitmap-frame #:padding 4 #:border (default-stroke)
-                             (bitmap-table 4 (map bitmap-text octets)
-                                           'cc 'cc 8 8))))))
+               (geo-frame #:padding 4 #:border (default-stroke)
+                          (geo-table 4 (map geo-text octets)
+                                     'cc 'cc 8 8))))))
 
-       (define rotated-schedule-bitmap : (-> (Vectorof Nonnegative-Fixnum) Integer Bitmap)
+       (define rotated-schedule-figure : (-> (Vectorof Nonnegative-Fixnum) Integer Geo)
          (let ([/dev/stdout (open-output-string '/dev/stdout)])
            (lambda [schedule start]
              (define pool (make-bytes 16))
@@ -176,9 +176,9 @@ The next testcase is dumped from the debug information of @~cite[libssh2].
              (integer->integer-bytes (vector-ref schedule (+ start 3)) 4 #false #true pool 12)
              
              (let ([octets (string-split (bytes->hexstring pool #:separator " "))])
-               (bitmap-frame #:padding 4 #:border (default-stroke)
-                             (bitmap-table 4 (map bitmap-text octets)
-                                           'cc 'cc 8 8))))))
+               (geo-frame #:padding 4 #:border (default-stroke)
+                          (geo-table 4 (map geo-text octets)
+                                     'cc 'cc 8 8))))))
        
        (define aes-key-schedule : (-> Symbol Positive-Byte Symbol (Vectorof Nonnegative-Fixnum))
          (lambda [0xkey column 0xlast]
@@ -198,22 +198,22 @@ The next testcase is dumped from the debug information of @~cite[libssh2].
                        (current-error-port)))
            schedule))
 
-       (define aes-add-round-key : (->* (Bytes (Vectorof Nonnegative-Fixnum) Byte) (Byte) Bitmap)
+       (define aes-add-round-key : (->* (Bytes (Vectorof Nonnegative-Fixnum) Byte) (Byte) Geo)
          (lambda [state schedule start [space 3]]
            (define Sin (state-array-bitmap state))
 
            (aes-state-array-add-round-key! state schedule start)
            
-           (bitmap-hc-append #:gapsize sbox-gapsize
-                             (if (> space 0)
-                                 (bitmap-hc-append* #:gapsize sbox-gapsize
-                                                    (cons Sin (make-list space (bitmap-ghost Sin))))
-                                 Sin)
-                             (bitmap-text "⊕")
-                             (rotated-schedule-bitmap schedule start)
-                             (bitmap-text "="))))
+           (geo-hc-append #:gapsize sbox-gapsize
+                          (if (> space 0)
+                              (geo-hc-append* #:gapsize sbox-gapsize
+                                                 (cons Sin (make-list space (geo-ghost Sin))))
+                              Sin)
+                          (geo-text "⊕")
+                          (rotated-schedule-figure schedule start)
+                          (geo-text "="))))
 
-       (define aes-round-step : (-> Bytes (Vectorof Nonnegative-Fixnum) Byte Bitmap)
+       (define aes-round-step : (-> Bytes (Vectorof Nonnegative-Fixnum) Byte Geo)
          (lambda [state schedule round]
            (define Sin (state-array-bitmap state))
            
@@ -228,10 +228,10 @@ The next testcase is dumped from the debug information of @~cite[libssh2].
            (aes-mix-columns! state 2 #:encrypt)
            (aes-mix-columns! state 3 #:encrypt)
            
-           (bitmap-hc-append #:gapsize sbox-gapsize
-                             Sin Ssub Sshift (aes-add-round-key state schedule (unsafe-b* round 4) 0))))
+           (geo-hc-append #:gapsize sbox-gapsize
+                          Sin Ssub Sshift (aes-add-round-key state schedule (unsafe-b* round 4) 0))))
 
-       (define aes-round-done : (-> Bytes (Vectorof Nonnegative-Fixnum) Byte Bitmap)
+       (define aes-round-done : (-> Bytes (Vectorof Nonnegative-Fixnum) Byte Geo)
          (lambda [state schedule round]
            (define Sin (state-array-bitmap state))
            
@@ -239,7 +239,7 @@ The next testcase is dumped from the debug information of @~cite[libssh2].
            (define Ssub (state-array-bitmap state))
 
            (aes-left-shift-rows! state)
-           (bitmap-vl-append #:gapsize sbox-gapsize
-                             (bitmap-hc-append #:gapsize sbox-gapsize
-                                               Sin Ssub (aes-add-round-key state schedule (unsafe-b* round 4) 1))
-                             (state-array-bitmap state))))]
+           (geo-vl-append #:gapsize sbox-gapsize
+                          (geo-hc-append #:gapsize sbox-gapsize
+                                         Sin Ssub (aes-add-round-key state schedule (unsafe-b* round 4) 1))
+                          (state-array-bitmap state))))]
