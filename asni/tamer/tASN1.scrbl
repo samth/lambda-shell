@@ -10,7 +10,7 @@
 
 @include-section{der.scrbl}
 
-@handbook-appendix[#:index-section? #true
+@handbook-bonus-appendix[#:index-section? #true
  (bib-entry #:key    "X680"
             #:title  "Information technology – Abstract Syntax Notation One (ASN.1): Specification of basic notation"
             #:author (org-author-name "ITU-T")
